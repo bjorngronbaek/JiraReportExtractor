@@ -1,5 +1,4 @@
 import groovy.util.slurpersupport.NodeChildren
-
 import java.text.DecimalFormat
 
 def url = '''https://jira.autorola.org/sr/jira.issueviews:searchrequest-xml/temp/SearchRequest.xml?jqlQuery=filter+in+%28%22Team+FM+%26+MP+2%22%29+AND+status+%3D+closed+AND+labels+%3D+release-2.54&tempMax=1000''';

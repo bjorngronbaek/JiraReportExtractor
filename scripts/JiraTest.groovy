@@ -1,6 +1,10 @@
 @Grab(group='org.codehaus.groovy.modules.http-builder', module='http-builder', version='0.7.1')
+import groovyx.net.http.*
+import groovyx.net.http.ContentType
+import groovyx.net.http.HTTPBuilder
+import groovyx.net.http.Method
 import groovyx.net.http.RESTClient
-
+import groovy.json.JsonSlurper;
 
 def url = "https://jira.autorola.org"
 def path = "/rest/api/2/search"
@@ -23,14 +27,17 @@ static def searchJira(String _url,String _path,String _query){
     def jira = new RESTClient(_url);
     jira.headers['Authorization'] = 'Basic '+"bg:535JKCqX".getBytes('iso-8859-1').encodeBase64()
     jira.headers['Accept'] = 'application/json'
-
+    
     def resp = jira.post(
-            path : _path,
-            body : _query,
-            requestContentType: 'application/json'
-    )
-
-    println resp.getData()
+        path : _path,
+        body : _query,
+        requestContentType: 'application/json'
+     )
+    
+    return resp.getData()
 }
 
-searchJira(url,path,query);
+def json = searchJira(url,path,query);
+def slurper = new JsonSlurper();
+def nodes = slurper.parse(json);
+println(nodes);

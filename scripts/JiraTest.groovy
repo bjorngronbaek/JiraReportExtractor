@@ -1,43 +1,53 @@
-@Grab(group='org.codehaus.groovy.modules.http-builder', module='http-builder', version='0.7.1')
-import groovyx.net.http.*
 import groovyx.net.http.ContentType
 import groovyx.net.http.HTTPBuilder
 import groovyx.net.http.Method
 import groovyx.net.http.RESTClient
-import groovy.json.JsonSlurper;
+import groovy.json.JsonSlurper
+import org.apache.http.HttpRequest
+import org.apache.http.HttpRequestInterceptor
+import org.apache.http.impl.client.LaxRedirectStrategy
+import org.apache.http.protocol.HttpContext;
 
-def url = "https://jira.autorola.org"
-def path = "/rest/api/2/search"
-def query = '''{
-    "jql": "filter = 13706 AND issuetype in (Story, Bug, Spike) AND status = Closed AND resolved >= 2014-01-01 AND cf[10004] is not EMPTY AND timespent is not EMPTY ORDER BY resolved DESC",
-    "startAt": 0,
-    "maxResults": 15,
-    "fields": [
-      "key",
-      "summary",
-      "status",
-      "reporter",
-      "cf[10004]",
-      "timespent"
-    ]
-    }'''
-
-static def searchJira(String _url,String _path,String _query){
-    def ret = null;
-    def jira = new RESTClient(_url);
-    jira.headers['Authorization'] = 'Basic '+"bg:535JKCqX".getBytes('iso-8859-1').encodeBase64()
-    jira.headers['Accept'] = 'application/json'
-    
-    def resp = jira.post(
-        path : _path,
-        body : _query,
-        requestContentType: 'application/json'
-     )
-    
-    return resp.getData()
+def props = new Properties()
+new File("../resources/jira.properties").withInputStream {
+    stream -> props.load(stream)
 }
 
-def json = searchJira(url,path,query);
-def slurper = new JsonSlurper();
-def nodes = slurper.parse(json);
-println(nodes);
+def searchpath = "/rest/api/2/search"
+
+def jira = new HTTPBuilder(props.url);
+/* this is required to bypass redirect for post request at Autorola but it seems to break the API*/
+//jira.client.setRedirectStrategy(new LaxRedirectStrategy())
+
+/* set content type to TEXT to prevent HTTPBuilder's parser from running */
+jira.request(Method.GET,ContentType.TEXT){ req ->
+    uri.path = searchpath;
+    uri.query = [
+            //jql: "filter = 13706 AND issuetype in (Story, Bug, Spike) AND status = Closed AND resolved >= 2014-01-01 AND cf[10004] is not EMPTY AND timespent is not EMPTY ORDER BY resolved DESC",
+            jql : "filter=13806 AND fixVersion = 2015-08-19",
+            startAt: 0,
+            //maxResults: 0,
+            fields: [
+                    "key",
+                    "project",
+                    "summary",
+                    "status",
+                    "reporter",
+                    "cf[10004]",
+                    "timespent"]
+    ]
+    /* set basic header */
+    headers['Authorization'] = 'Basic '+"${props.username}:${props.password}".getBytes('iso-8859-1').encodeBase64()
+    /* set accept header manually to get JSON result when using content-tyep TEXT */
+    headers['Accept'] = 'application/json'
+    response.success = { resp, reader ->
+        assert resp.status == 200
+        println "My response handler got response: ${resp.statusLine}"
+
+        /* feed to slurper to get GPathResult */
+        def parser = new JsonSlurper().parse(reader)
+        parser.issues.each{
+            println it.key
+        }
+    }
+}

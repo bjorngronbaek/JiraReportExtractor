@@ -48,4 +48,6 @@ hs_err_pid*
 
 # "temporary" build files
 /target
-/.idea
+
+**/.idea/workspace.xml
+**/.idea/tasks.xml

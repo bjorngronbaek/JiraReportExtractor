@@ -28,9 +28,6 @@ abstract class JiraCalculator extends Script {
             float hours = it.fields.timespent / 3600
             String key = it.key
 
-            totalPoints += storyPoints
-            totalHours += hours
-
             def issue = new JiraIssue(key,storyPoints,hours)
             if(map.containsKey(storyPoints)){
                 map.get(storyPoints).add(issue)
@@ -83,13 +80,47 @@ abstract class JiraCalculator extends Script {
     }
 
     void printHour2PointRatio() {
-        println "Total issues: ${parser.issues.size()}, Total points: ${totalPoints}, Total hours: ${totalHours}, Hours pr. point: ${totalHours/totalPoints}"
+        def totalpoints = 0;
+        def totalhours = 0
+        parser.issues.each{
+            totalpoints += it.fields.customfield_10004
+            totalhours += it.fields.timespent / 3600
+        }
+
+        println "Total issues: ${parser.issues.size()}, Total points: ${totalpoints}, Total hours: ${totalhours}, Hours pr. point: ${totalhours/totalpoints}"
+        totalHours = totalhours;
+        totalPoints = totalpoints;
     }
 
     void printEstimationRates(boolean matchTShirtSizes){
-        issuesMap.each { k, v ->
-            def points = v.collect{it.hours * totalPoints/totalHours};
-            println "${k} ${df.format(points.sum() / points.size())}"
+        if(matchTShirtSizes){
+            Map<JiraTShirtSize,List<Float>> tShirtsMap = new TreeMap<>();
+            issuesMap.each { k, v ->
+                if(k != 0){
+                    //skip all 0 point stories
+                    JiraTShirtSize size = JiraTShirtSize.values().find{
+                        k >= it.low && k < it.high
+                    }
+                    if(tShirtsMap.containsKey(size)){
+                        tShirtsMap.get(size).addAll(v);
+                    }
+                    else{
+                        tShirtsMap.put(size,v);
+                    }
+                }
+            }
+
+            tShirtsMap.each { k, v ->
+                def points = v.collect { it.hours * totalPoints / totalHours };
+                println "${k} ${df.format(points.sum() / points.size())}"
+            }
+
+        }
+        else {
+            issuesMap.each { k, v ->
+                def points = v.collect { it.hours * totalPoints / totalHours };
+                println "${k} ${df.format(points.sum() / points.size())}"
+            }
         }
     }
 
@@ -118,14 +149,6 @@ abstract class JiraCalculator extends Script {
             this.low = low
             this.rate = rate
             this.high = high
-        }
-
-        JiraTShirtSize fromValue(value){
-            for(JiraTShirtSize size: JiraTShirtSize.values()){
-                if(value >= size.low && value < size.high){
-                    size; //implicit return, noob!
-                }
-            }
         }
     }
 }

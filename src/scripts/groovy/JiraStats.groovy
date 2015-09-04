@@ -10,6 +10,7 @@ printMap()
 printStatsMap()
 printHour2PointRatio()
 printEstimationRates(false);
+printEstimationRates(true);
 /*
 searchResult.channel.item.each{
     NodeChildren estimateNode = it.customfields.depthFirst().find { it.name() == 'customfield' && it.@id == 'customfield_10004'; }.customfieldvalues.customfieldvalue

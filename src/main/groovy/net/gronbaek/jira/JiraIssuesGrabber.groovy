@@ -18,13 +18,19 @@ class JiraIssuesGrabber{
         }
     }
 
-    def getFullJiraSearchResult(){
-        def json = getJiraSearchResult(50,0)
+    def getFullJiraSearchResult() {
+        def maxResults = 50
+        def json = getJiraSearchResult(maxResults)
+
         def root = new JsonSlurper().parse(new StringReader(json))
         def total = root.total;
-        for(int i = 50;i<total;i+=50){
-            def parse = new JsonSlurper().parse(new StringReader(getJiraSearchResult(50, i)))
-            root.issues.addAll(parse.issues)
+        def size = root.issues.size()
+
+        if (size < total) {
+            for (int startAt = size; startAt < total; startAt += maxResults) {
+                def parse = new JsonSlurper().parse(new StringReader(getJiraSearchResult(maxResults, startAt)))
+                root.issues.addAll(parse.issues)
+            }
         }
 
         root
@@ -46,8 +52,8 @@ class JiraIssuesGrabber{
         def json = jira.request(Method.GET, ContentType.TEXT) { req ->
             uri.path = searchpath;
             uri.query = [
-                    //jql    : "filter=13806 AND fixVersion = 2015-08-19",
-                    jql    : "filter=13806",
+                    jql    : "filter=13806 AND fixVersion = 2015-08-19",
+                    //jql    : "filter=13806",
                     startAt: _startAt,
                     maxResults: _maxResults,
                     fields : [
@@ -59,6 +65,7 @@ class JiraIssuesGrabber{
                             "customfield_10004",
                             "timespent"]
             ]
+            println uri
             /* set basic header */
             headers['Authorization'] = 'Basic ' + "${username}:${password}".getBytes('iso-8859-1').encodeBase64()
             /* set accept header manually to get JSON result when using content-type TEXT */
@@ -69,6 +76,12 @@ class JiraIssuesGrabber{
                 def text = reader.getText()
                 println("Result ${text}")
                 return text;
+            }
+
+            response.failure = { resp,reader ->
+                println "Got error response: ${resp.statusLine}"
+                def text = reader.getText()
+                println("Result ${text}")
             }
         }
     }

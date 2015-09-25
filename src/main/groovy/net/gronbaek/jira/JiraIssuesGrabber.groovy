@@ -1,6 +1,5 @@
 package net.gronbaek.jira
 
-import groovy.json.JsonBuilder
 import groovy.json.JsonSlurper
 @Grapes(
         @Grab(group='org.codehaus.groovy.modules.http-builder', module='http-builder', version='0.7.1')
@@ -62,7 +61,7 @@ class JiraIssuesGrabber{
                             "summary",
                             "status",
                             "reporter",
-                            "customfield_10004",
+                            "customfield_10004", // Story points
                             "timespent"]
             ]
             println uri
